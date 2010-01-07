@@ -1,11 +1,10 @@
 package Buffer::Transactional;
 use Moose;
 use Moose::Util::TypeConstraints;
-use MooseX::AttributeHelpers;
 
 use Buffer::Transactional::Buffer::String;
 
-our $VERSION   = '0.01';
+our $VERSION   = '0.02';
 our $AUTHORITY = 'cpan:STEVAN';
 
 has 'out' => (
@@ -15,18 +14,16 @@ has 'out' => (
 );
 
 has '_buffers' => (
-    metaclass => 'Collection::Array',
-    is        => 'ro',
-    isa       => 'ArrayRef[ Buffer::Transactional::Buffer ]',
-    lazy      => 1,
-    default   => sub { [] },
-    provides  => {
-        'pop'   => 'clear_current_buffer',
-        'empty' => 'has_current_buffer',
-        'push'  => '_add_buffer',
-    },
-    curries   => {
-        'get'  => { 'current_buffer' => [ -1 ] },
+    traits  => [ 'Array' ],
+    is      => 'ro',
+    isa     => 'ArrayRef[ Buffer::Transactional::Buffer ]',
+    lazy    => 1,
+    default => sub { [] },
+    handles => {
+        '_add_buffer'          => 'push',
+        'clear_current_buffer' => 'pop',
+        'has_current_buffer'   => 'count',
+        'current_buffer'       => [ 'get', -1 ]
     }
 );
 
@@ -74,6 +71,13 @@ sub _write_to_buffer {
 sub print {
     my ($self, @data) = @_;
     $self->_write_to_buffer( @data );
+}
+
+sub txn_do {
+    my ($self, $body) = @_;
+    $self->begin_work;
+    $body->();
+    $self->commit;
 }
 
 __PACKAGE__->meta->make_immutable;
@@ -168,6 +172,13 @@ Rollsback the current transaction.
 
 Print to the current buffer.
 
+=item B<txn_do ( \&body )>
+
+This is a convience wrapper around the C<begin_work> and C<commit>
+methods. It takes a CODE ref and will execute it within the context
+of a transaction. It does B<not> attempt to handle exceptions,
+rollbacks or anything of the like, it simply wraps the transaction.
+
 =back
 
 =head1 SEE ALSO
@@ -186,7 +197,7 @@ Stevan Little E<lt>stevan.little@iinteractive.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2009 Infinity Interactive, Inc.
+Copyright 2009, 2010 Infinity Interactive, Inc.
 
 L<http://www.iinteractive.com>
 

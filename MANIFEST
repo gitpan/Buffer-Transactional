@@ -25,3 +25,5 @@ t/004_file_buffer.t
 t/005_array_buffer.t
 t/006_lazy_buffer.t
 t/007_lazy_buffer_complex.t
+t/008_txn_do.t
+t/009_txn_do_nested.t
